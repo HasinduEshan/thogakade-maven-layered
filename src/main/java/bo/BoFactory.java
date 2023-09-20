@@ -4,6 +4,7 @@ import bo.custom.OrderBo;
 import bo.custom.impl.CustomerBoImpl;
 import bo.custom.impl.ItemBoImpl;
 import bo.custom.impl.OrderBoImpl;
+import bo.custom.impl.OrderDetailsBoImpl;
 
 public class BoFactory {
     private static BoFactory boFactory;
@@ -25,6 +26,7 @@ public class BoFactory {
             case CUSTOMER: return (T) new CustomerBoImpl();
             case ITEM: return (T) new ItemBoImpl();
             case ORDERS: return (T) new OrderBoImpl();
+            case ORDER_DETAILS: return (T) new OrderDetailsBoImpl();
             default: return null;
         }
     }

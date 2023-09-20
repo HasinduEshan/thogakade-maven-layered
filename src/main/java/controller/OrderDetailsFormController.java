@@ -1,16 +1,15 @@
 package controller;
 
+import bo.BoFactory;
+import bo.custom.OrderDetailsBo;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTreeTableView;
 import com.jfoenix.controls.RecursiveTreeItem;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
-import dao.DaoFactory;
-import dao.custom.CustomerDao;
-import dao.custom.ItemDao;
-import dao.custom.OrderDao;
-import dao.custom.OrderDetailsDao;
-import entity.Customer;
-import entity.Item;
+import dto.CustomerDto;
+import dto.ItemDto;
+import dto.OrderDetailsDto;
+import dto.OrderDto;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -25,16 +24,12 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import entity.Order;
-import entity.OrderDetails;
 import dto.tm.OrderDetailsTm;
 import dto.tm.OrderTm;
-import util.CrudUtil;
+
 
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,10 +48,7 @@ public class OrderDetailsFormController {
     public TreeTableColumn colQty;
     public TreeTableColumn colAmount;
 
-    OrderDetailsDao orderDetailsDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDER_DETAILS);
-    ItemDao itemDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ITEM);
-    OrderDao orderDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDERS);
-    CustomerDao customerDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.CUSTOMER);
+    OrderDetailsBo orderDetailsBo = BoFactory.getInstance().getBoType(BoFactory.BoType.ORDER_DETAILS);
 
     public void backButtonOnAction(ActionEvent actionEvent) {
         Stage stage = (Stage) orderDetailsPane.getScene().getWindow();
@@ -91,11 +83,11 @@ public class OrderDetailsFormController {
     private void loadDetails(TreeItem<OrderTm> newValue) {
         ObservableList<OrderDetailsTm> tmList = FXCollections.observableArrayList();
         try {
-            List<OrderDetails> list = orderDetailsDao.findOrderDetailByOrderId(newValue.getValue().getId());
+            List<OrderDetailsDto> list = orderDetailsBo.findOrderDetailByOrderId(newValue.getValue().getId());
 
-            for (OrderDetails detail:list) {
+            for (OrderDetailsDto detail:list) {
 
-                Item item = itemDao.find(detail.getItemCode());
+                ItemDto item = orderDetailsBo.findItem(detail.getItemCode());
 
                 tmList.add(new OrderDetailsTm(
                         detail.getItemCode(),
@@ -119,9 +111,9 @@ public class OrderDetailsFormController {
     private void loadOrders() {
         ObservableList<OrderTm> tmList = FXCollections.observableArrayList();
         try {
-            List<Order> list = orderDao.findAll();
+            List<OrderDto> list = orderDetailsBo.findAllOrders();
 
-            for (Order order:list) {
+            for (OrderDto order:list) {
                 JFXButton btn = new JFXButton("Delete");
                 btn.setBackground(Background.fill(Color.rgb(227,92,92)));
                 btn.setTextFill(Color.rgb(255,255,255));
@@ -133,7 +125,7 @@ public class OrderDetailsFormController {
                         Optional<ButtonType> buttonType = new Alert(Alert.AlertType.CONFIRMATION, "Do you want to delete " + order.getId() + " order ? ", ButtonType.YES, ButtonType.NO).showAndWait();
                         if (buttonType.get() == ButtonType.YES){
 
-                            boolean isDeleted = orderDao.delete(order.getId());;
+                            boolean isDeleted = orderDetailsBo.deleteOrder(order.getId());;
 
                             if (isDeleted){
                                 new Alert(Alert.AlertType.INFORMATION,"Order Deleted..!").show();
@@ -147,7 +139,7 @@ public class OrderDetailsFormController {
                     }
                 });
 
-                Customer customer = customerDao.find(order.getCustomerId());
+                CustomerDto customer = orderDetailsBo.findCustomer(order.getCustomerId());
 
                 tmList.add(new OrderTm(
                         order.getId(),
