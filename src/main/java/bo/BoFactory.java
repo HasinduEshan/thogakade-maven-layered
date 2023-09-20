@@ -1,6 +1,7 @@
 package bo;
 
 import bo.custom.impl.CustomerBoImpl;
+import bo.custom.impl.ItemBoImpl;
 
 public class BoFactory {
     private static BoFactory boFactory;
@@ -20,6 +21,7 @@ public class BoFactory {
     public <T extends SuperBo>T getBoType(BoType type){
         switch (type){
             case CUSTOMER: return (T) new CustomerBoImpl();
+            case ITEM: return (T) new ItemBoImpl();
             default: return null;
         }
     }

@@ -1,5 +1,7 @@
 package controller;
 
+import bo.BoFactory;
+import bo.custom.ItemBo;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
 import com.jfoenix.controls.JFXTreeTableView;
@@ -7,6 +9,7 @@ import com.jfoenix.controls.RecursiveTreeItem;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
 import dao.DaoFactory;
 import dao.custom.ItemDao;
+import dto.ItemDto;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -72,7 +75,8 @@ public class ItemFormController implements Initializable {
     @FXML
     private JFXTextField txtUnitPrice;
 
-    ItemDao itemDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ITEM);
+    //ItemDao itemDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ITEM);
+    ItemBo itemBo = BoFactory.getInstance().getBoType(BoFactory.BoType.ITEM);
 
     public void backButtonOnAction(ActionEvent actionEvent) {
         Stage stage = (Stage) itemPane.getScene().getWindow();
@@ -100,7 +104,7 @@ public class ItemFormController implements Initializable {
 
     @FXML
     void saveButtonOnAction(ActionEvent event) {
-        Item item = new Item(
+        ItemDto item = new ItemDto(
                 lblCode.getText(),
                 txtDesc.getText(),
                 Double.parseDouble(txtUnitPrice.getText()),
@@ -109,7 +113,7 @@ public class ItemFormController implements Initializable {
 
         try {
 
-            boolean isSaved = itemDao.save(item);
+            boolean isSaved = itemBo.saveItem(item);
 
             if (isSaved) {
                 new Alert(Alert.AlertType.INFORMATION,"Item Saved..!").show();
@@ -128,9 +132,9 @@ public class ItemFormController implements Initializable {
     private void loadTable() {
         ObservableList<ItemTm> tmList = FXCollections.observableArrayList();
         try {
-            List<Item> list = itemDao.findAll();
+            List<ItemDto> list = itemBo.findAllItems();
 
-            for (Item item:list) {
+            for (ItemDto item:list) {
                 JFXButton btn = new JFXButton("Delete");
                 btn.setBackground(Background.fill(Color.rgb(227,92,92)));
                 btn.setTextFill(Color.rgb(255,255,255));
@@ -142,7 +146,7 @@ public class ItemFormController implements Initializable {
                         Optional<ButtonType> buttonType = new Alert(Alert.AlertType.CONFIRMATION, "Do you want to delete " + item.getCode() + " item ? ", ButtonType.YES, ButtonType.NO).showAndWait();
                         if (buttonType.get() == ButtonType.YES){
 
-                            boolean isDeleted = itemDao.delete(item.getCode());
+                            boolean isDeleted = itemBo.deleteItem(item.getCode());
 
                             if (isDeleted){
                                 new Alert(Alert.AlertType.INFORMATION,"Item Deleted..!").show();
@@ -179,15 +183,7 @@ public class ItemFormController implements Initializable {
 
     private void generateId() {
         try {
-            String id = itemDao.findLastId();
-
-            if (id!=null){
-                int num = Integer.parseInt(id.split("[P]")[1]);
-                num++;
-                lblCode.setText(String.format("P%03d",num));
-            }else {
-                lblCode.setText("P001");
-            }
+            lblCode.setText(itemBo.generateId());
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
@@ -197,7 +193,7 @@ public class ItemFormController implements Initializable {
 
     @FXML
     void updateButtonOnAction(ActionEvent event) {
-        Item item = new Item(
+        ItemDto item = new ItemDto(
                 lblCode.getText(),
                 txtDesc.getText(),
                 Double.parseDouble(txtUnitPrice.getText()),
@@ -205,7 +201,7 @@ public class ItemFormController implements Initializable {
         );
 
         try {
-            boolean isUpdate = itemDao.update(item);
+            boolean isUpdate = itemBo.updateItem(item);
 
             if (isUpdate){
                 new Alert(Alert.AlertType.INFORMATION,"Item Updated..!").show();
