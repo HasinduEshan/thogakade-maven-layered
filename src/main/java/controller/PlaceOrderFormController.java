@@ -1,5 +1,7 @@
 package controller;
 
+import bo.BoFactory;
+import bo.custom.OrderBo;
 import com.jfoenix.controls.*;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
 import dao.DaoFactory;
@@ -8,6 +10,10 @@ import dao.custom.ItemDao;
 import dao.custom.OrderDao;
 import dao.custom.OrderDetailsDao;
 import db.DBConnection;
+import dto.CustomerDto;
+import dto.ItemDto;
+import dto.OrderDetailsDto;
+import dto.OrderDto;
 import entity.Customer;
 import entity.Item;
 import javafx.collections.FXCollections;
@@ -94,10 +100,12 @@ public class PlaceOrderFormController implements Initializable {
     @FXML
     private JFXTextField txtSearch;
 
-    OrderDao orderDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDERS);
+    /*OrderDao orderDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDERS);
     ItemDao itemDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ITEM);
     CustomerDao customerDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.CUSTOMER);
-    OrderDetailsDao orderDetailsDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDER_DETAILS);
+    OrderDetailsDao orderDetailsDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.ORDER_DETAILS);*/
+
+    OrderBo orderBo = BoFactory.getInstance().getBoType(BoFactory.BoType.ORDERS);
 
     ObservableList<CartTm> tmList = FXCollections.observableArrayList();
 
@@ -194,13 +202,13 @@ public class PlaceOrderFormController implements Initializable {
             ));
         }
 
-        Order order = new Order(
+        /*Order order = new Order(
                 lblOrderId.getText(),
                 LocalDate.now().toString(),
                 cmbCustomerId.getValue().toString()
-        );
+        );*/
         try {
-            DBConnection.getInstance().getConnection().setAutoCommit(false);
+            /*DBConnection.getInstance().getConnection().setAutoCommit(false);
 
             boolean orderPlaced = orderDao.save(order);
 
@@ -230,7 +238,36 @@ public class PlaceOrderFormController implements Initializable {
             }else{
                 new Alert(Alert.AlertType.ERROR,"Something went wrong..!").show();
                 DBConnection.getInstance().getConnection().rollback();
+            }*/
+
+            List<OrderDetailsDto> detailsDtos = new ArrayList<>();
+
+            for (OrderDetails detail:detailsList) {
+                detailsDtos.add(new OrderDetailsDto(
+                        detail.getOrderId(),
+                        detail.getItemCode(),
+                        detail.getQty(),
+                        detail.getUnitPrice()
+                ));
             }
+
+            OrderDto dto = new OrderDto(
+                    lblOrderId.getText(),
+                    LocalDate.now().toString(),
+                    cmbCustomerId.getValue().toString(),
+                    detailsDtos
+            );
+
+            if (orderBo.saveOrder(dto)) {
+                new Alert(Alert.AlertType.INFORMATION,"Order Placed..!").show();
+                tmList.clear();
+                tblOrder.refresh();
+                clearFields();
+            }else{
+                new Alert(Alert.AlertType.ERROR,"Something went wrong..!").show();
+            }
+
+
         } catch (SQLException | ClassNotFoundException e) {
             DBConnection.getInstance().getConnection().rollback();
             e.printStackTrace();
@@ -260,18 +297,22 @@ public class PlaceOrderFormController implements Initializable {
         loadItemCodes();
 
         cmbCustomerId.setOnAction(actionEvent -> {
-            setCustomerName();
+            if (!cmbCustomerId.getValue().toString().isEmpty()){
+                setCustomerName();
+            }
         });
 
         cmbItemCode.setOnAction(actionEvent -> {
-            setItemDetails();
+            if (!cmbItemCode.getValue().toString().isEmpty()){
+                setItemDetails();
+            }
         });
     }
 
     private void setItemDetails() {
         try {
 
-            Item item = itemDao.find(cmbItemCode.getValue().toString());
+            ItemDto item = orderBo.findItem(cmbItemCode.getValue().toString());
 
             if (item!=null){
                 txtDescription.setText(item.getDescription());
@@ -289,7 +330,7 @@ public class PlaceOrderFormController implements Initializable {
     private void setCustomerName() {
         try {
 
-            Customer customer = customerDao.find(cmbCustomerId.getValue().toString());
+            CustomerDto customer = orderBo.findCustomer(cmbCustomerId.getValue().toString());
 
             if (customer!=null){
                 txtCustomerName.setText(customer.getName());
@@ -305,11 +346,11 @@ public class PlaceOrderFormController implements Initializable {
     private void loadItemCodes() {
         try {
 
-            List<Item> items = itemDao.findAll();
+            List<ItemDto> items = orderBo.findAllItems();
 
             ObservableList<String> itemCodes = FXCollections.observableArrayList();
 
-            for (Item item:items) {
+            for (ItemDto item:items) {
                 itemCodes.add(item.getCode());
             }
 
@@ -326,9 +367,9 @@ public class PlaceOrderFormController implements Initializable {
         try {
 
             ObservableList<String> customerIds = FXCollections.observableArrayList();
-            List<Customer> customers = customerDao.findAll();
+            List<CustomerDto> customers = orderBo.findAllCustomers();
 
-            for (Customer customer:customers) {
+            for (CustomerDto customer:customers) {
                 customerIds.add(customer.getId());
             }
 
@@ -343,16 +384,7 @@ public class PlaceOrderFormController implements Initializable {
 
     private void generateId() {
         try {
-
-            String id = orderDao.findLastId();
-
-            if (id!=null){
-                int num = Integer.parseInt(id.split("[D]")[1]);
-                num++;
-                lblOrderId.setText(String.format("D%03d",num));
-            }else {
-                lblOrderId.setText("D001");
-            }
+            lblOrderId.setText(orderBo.generateId());
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
