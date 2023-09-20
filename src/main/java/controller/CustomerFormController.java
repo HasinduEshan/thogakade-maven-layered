@@ -1,12 +1,13 @@
 package controller;
 
+import bo.BoFactory;
+import bo.custom.CustomerBo;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
 import com.jfoenix.controls.JFXTreeTableView;
 import com.jfoenix.controls.RecursiveTreeItem;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
-import dao.DaoFactory;
-import dao.custom.CustomerDao;
+import dto.CustomerDto;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -22,7 +23,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import entity.Customer;
 import dto.tm.CustomerTm;
 
 import java.io.IOException;
@@ -68,7 +68,8 @@ public class CustomerFormController implements Initializable {
     @FXML
     private JFXTextField txtSearch;
 
-    CustomerDao customerDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.CUSTOMER);
+    //CustomerDao customerDao = DaoFactory.getDaoFactory().getDaoType(DaoFactory.DaoType.CUSTOMER);
+    CustomerBo customerBo = BoFactory.getInstance().getBoType(BoFactory.BoType.CUSTOMER);
 
     public void backButtonOnAction(ActionEvent actionEvent) {
         Stage stage = (Stage) customerPane.getScene().getWindow();
@@ -97,14 +98,14 @@ public class CustomerFormController implements Initializable {
 
     @FXML
     void saveButtonOnAction(ActionEvent event) {
-        Customer customer = new Customer(
+        CustomerDto customer = new CustomerDto(
                 lblCustId.getText(),
                 txtName.getText(),
                 txtAddress.getText(),
                 Double.parseDouble(txtSalary.getText())
         );
         try {
-            boolean isSaved = customerDao.save(customer);
+            boolean isSaved = customerBo.saveCustomer(customer);
 
             if (isSaved) {
                 new Alert(Alert.AlertType.INFORMATION,"Customer Saved..!").show();
@@ -122,7 +123,7 @@ public class CustomerFormController implements Initializable {
 
     @FXML
     void updateButtonOnAction(ActionEvent event) {
-        Customer customer = new Customer(
+        CustomerDto customer = new CustomerDto(
                 lblCustId.getText(),
                 txtName.getText(),
                 txtAddress.getText(),
@@ -130,7 +131,7 @@ public class CustomerFormController implements Initializable {
         );
         try {
 
-            boolean isUpdate = customerDao.update(customer);
+            boolean isUpdate = customerBo.updateCustomer(customer);
 
             if (isUpdate){
                 new Alert(Alert.AlertType.INFORMATION,"Customer Updated..!").show();
@@ -189,9 +190,9 @@ public class CustomerFormController implements Initializable {
     private void loadTable() {
         ObservableList<CustomerTm> tmList = FXCollections.observableArrayList();
         try {
-            List<Customer> list = customerDao.findAll();
+            List<CustomerDto> list = customerBo.findAllCustomers();
 
-            for (Customer customer:list) {
+            for (CustomerDto customer:list) {
                 JFXButton btn = new JFXButton("Delete");
                 btn.setBackground(Background.fill(Color.rgb(227,92,92)));
                 btn.setTextFill(Color.rgb(255,255,255));
@@ -202,7 +203,7 @@ public class CustomerFormController implements Initializable {
                         Optional<ButtonType> buttonType = new Alert(Alert.AlertType.CONFIRMATION, "Do you want to delete " + customer.getId() + " customer ? ", ButtonType.YES, ButtonType.NO).showAndWait();
                         if (buttonType.get() == ButtonType.YES){
 
-                            boolean isDelete = customerDao.delete(customer.getId());
+                            boolean isDelete = customerBo.deleteCustomer(customer.getId());
 
                             if (isDelete){
                                 new Alert(Alert.AlertType.INFORMATION,"Customer Deleted..!").show();
@@ -239,15 +240,7 @@ public class CustomerFormController implements Initializable {
 
     private void generateId() {
         try {
-            String id = customerDao.findLastId();
-
-            if (id!=null){
-                int num = Integer.parseInt(id.split("[C]")[1]);
-                num++;
-                lblCustId.setText(String.format("C%03d",num));
-            }else {
-                lblCustId.setText("C001");
-            }
+            lblCustId.setText(customerBo.generateId());
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
